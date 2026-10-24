@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.angular/
+.cache/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.md
+*.txt

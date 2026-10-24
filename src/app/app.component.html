@@ -1,0 +1,64 @@
+<div class="app-shell">
+  <header class="site-header">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div><span class="brand-name">pulse<span>ops</span></span><small>INFRASTRUCTURE STUDIO</small></div>
+    </div>
+    <nav class="main-nav" aria-label="Navegação principal">
+      <a class="nav-item active" href="#overview" aria-current="page"><strong>Visão geral</strong></a>
+    </nav>
+  </header>
+
+  <main class="main-content">
+    <div class="content-wrap">
+      <section class="page-heading" id="overview">
+        <div class="heading-cta"><button class="primary-button" (click)="openCreate()"><span>＋</span> Novo ativo</button></div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Resumo operacional">
+        <article class="metric-card metric-featured"><div class="metric-top"><span class="metric-kicker">Disponibilidade</span><span class="metric-trend positive">↗ 0,8%</span></div><div class="metric-value">{{ availabilityLabel }}</div><div class="sparkline"><span style="height: 34%"></span><span style="height: 45%"></span><span style="height: 38%"></span><span style="height: 63%"></span><span style="height: 55%"></span><span style="height: 76%"></span><span style="height: 68%"></span><span style="height: 92%"></span><span style="height: 82%"></span><span style="height: 100%"></span></div><p>Uptime nos últimos 30 dias</p></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-kicker">Ativos monitorados</span><span class="metric-icon teal">⌘</span></div><div class="metric-value">{{ assets.length | number:'2.0-0' }}</div><div class="metric-sub"><span class="status-dot green"></span>{{ operationalCount }} operacionais <span class="separator">•</span><span class="status-dot amber"></span>{{ attentionCount }} em atenção</div><p>Recursos catalogados</p></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-kicker">Latência média</span><span class="metric-trend positive">↓ 12ms</span></div><div class="metric-value">184<small>ms</small></div><div class="mini-bars"><i style="height: 48%"></i><i style="height: 66%"></i><i style="height: 43%"></i><i style="height: 78%"></i><i style="height: 56%"></i><i style="height: 42%"></i><i style="height: 33%"></i></div><p>Edge → origem / sa-east-1</p></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-kicker">Segurança de rede</span><span class="metric-icon purple">◈</span></div><div class="metric-value">{{ securityScore }}</div><div class="security-score"><span class="score-track"><i></i></span><b>{{ securityScore === 'A+' ? 'Sem exposição crítica' : securityScore === '—' ? 'Sem dados locais' : 'Requer acompanhamento' }}</b></div><p>VPC pulseops-core</p></article>
+      </section>
+
+      <section class="workspace-grid" id="asset-inventory">
+        <article class="panel inventory-panel">
+          <div class="panel-header"><div><span class="section-kicker">CATÁLOGO OPERACIONAL</span><h2>Inventário de ativos <span class="count-pill">{{ assets.length }}</span></h2></div></div>
+          <div class="inventory-toolbar"><label class="search-box"><span>⌕</span><input type="search" [(ngModel)]="searchTerm" placeholder="Buscar por nome, tipo ou zona" aria-label="Buscar ativos"></label><div class="filter-group"><button *ngFor="let filter of statusFilters" type="button" class="filter-button" [class.selected]="activeFilter === filter" (click)="setFilter($any(filter))">{{ filter }}</button></div></div>
+
+          <div *ngIf="isLoading" class="state-box loading-state"><span class="loader"></span><strong>Carregando inventário</strong><small>Consultando o workspace local…</small></div>
+          <div *ngIf="!isLoading && loadError" class="state-box error-state"><span class="state-symbol">!</span><strong>Não foi possível carregar os ativos</strong><small>O armazenamento local não respondeu.</small><button class="text-button" (click)="retryLoad()">Tentar novamente ↻</button></div>
+          <div *ngIf="!isLoading && !loadError && filteredAssets.length === 0" class="state-box empty-state"><span class="state-symbol">⌕</span><strong>Nenhum ativo encontrado</strong><small>{{ hasActiveFilters ? 'Tente remover um filtro ou ajustar sua busca.' : 'Adicione o primeiro recurso do workspace.' }}</small><button *ngIf="hasActiveFilters" class="text-button" (click)="clearFilters()">Limpar filtros</button></div>
+
+          <div *ngIf="!isLoading && !loadError && filteredAssets.length" class="asset-table" role="table" aria-label="Ativos monitorados">
+            <div class="table-head" role="row"><span>Ativo</span><span>Ambiente</span><span>Status</span><span>Última leitura</span><span></span></div>
+            <button class="asset-row" *ngFor="let asset of filteredAssets; trackBy: trackById" [class.row-selected]="selectedAsset?.id === asset.id" (click)="selectAsset(asset)" role="row">
+              <span class="asset-cell-main"><span class="asset-kind" [class]="'kind-' + cssClass(asset.kind)">{{ kindIcon(asset.kind) }}</span><span><strong>{{ asset.name }}</strong><small>{{ asset.kind }} <b>·</b> {{ asset.zone }}</small></span></span>
+              <span class="environment-tag">{{ asset.environment }}</span>
+              <span><span class="status-label" [class]="'status-' + cssClass(asset.status)"><i></i>{{ asset.status }}</span></span>
+              <span class="updated-time">{{ asset.updatedAt }}</span><span class="row-arrow">›</span>
+            </button>
+          </div>
+          <div class="panel-footer"><span><span class="footer-live"></span> Dados demonstrativos <b>·</b> persistidos neste navegador</span><button class="reset-button" type="button" (click)="resetDemo()">Restaurar demo</button></div>
+        </article>
+
+        <aside class="panel detail-panel" aria-label="Detalhes do ativo selecionado">
+          <div class="detail-header"><span class="section-kicker">ATIVO SELECIONADO</span></div>
+          <div *ngIf="selectedAsset; else noSelection" class="detail-content"><div class="detail-title-row"><div class="detail-icon" [class]="'kind-' + cssClass(selectedAsset.kind)">{{ kindIcon(selectedAsset.kind) }}</div><div><h2>{{ selectedAsset.name }}</h2><span class="id-label">{{ selectedAsset.id }}</span></div></div><div class="detail-status-row"><span class="status-label" [class]="'status-' + cssClass(selectedAsset.status)"><i></i>{{ selectedAsset.status }}</span><span class="detail-updated">Atualizado {{ selectedAsset.updatedAt }}</span></div><p class="detail-description">{{ selectedAsset.description }}</p><div class="detail-facts"><div><small>Endpoint / IP</small><strong>{{ selectedAsset.endpoint }}</strong></div><div><small>Responsável</small><strong>{{ selectedAsset.owner }}</strong></div><div><small>Zona</small><strong>{{ selectedAsset.zone }}</strong></div><div><small>Ambiente</small><strong>{{ selectedAsset.environment }}</strong></div></div><div class="detail-actions"><button class="secondary-button" (click)="openEdit(selectedAsset)">Editar ativo <span>↗</span></button><button class="danger-button" (click)="askDelete(selectedAsset)" aria-label="Remover ativo">⌫</button></div></div>
+          <ng-template #noSelection><div class="no-selection"><span>◌</span><strong>Selecione um ativo</strong><small>Os detalhes operacionais aparecem aqui.</small></div></ng-template>
+        </aside>
+      </section>
+
+      <section class="architecture-section" id="architecture">
+        <div class="architecture-canvas"><div class="canvas-label label-edge">PUBLIC EDGE</div><div class="canvas-label label-core">VPC · 10.0.0.0/16</div><div class="arch-line line-one"></div><div class="arch-line line-two"></div><div class="arch-line line-three"></div><div class="arch-node node-user"><span class="node-icon">⌁</span><div><small>Entrada</small><strong>Usuário</strong><em>HTTPS / 443</em></div></div><div class="arch-node node-cloud"><span class="node-icon">↗</span><div><small>Distribuição</small><strong>CloudFront</strong><em>OAC habilitado</em></div></div><div class="arch-node node-s3"><span class="node-icon">▤</span><div><small>Origem privada</small><strong>S3 bucket</strong><em>pulseops-web</em></div></div><div class="arch-node node-zabbix"><span class="node-icon">◌</span><div><small>Health check</small><strong>Zabbix / EC2</strong><em>HTTP a cada 1 min</em></div></div><div class="legend"><span><i class="legend-public"></i> público</span><span><i class="legend-private"></i> privado</span><span><i class="legend-monitor"></i> observabilidade</span></div><div class="vpc-footer"><span class="vpc-chip public-chip">10.0.10.0/24 <b>pública</b></span><span class="vpc-chip private-chip">10.0.20.0/24 <b>privada</b></span><span class="vpc-chip private-chip">10.0.30.0/26 <b>dados</b></span></div></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div *ngIf="isFormOpen" class="modal-backdrop" (click)="closeForm()" role="presentation"><section class="modal-card form-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="form-title" aria-describedby="form-description"><div class="modal-header"><div><span class="section-kicker">{{ editingAsset ? 'ATUALIZAR RECURSO' : 'NOVO RECURSO' }}</span><h2 id="form-title">{{ editingAsset ? 'Editar ativo' : 'Adicionar ativo' }}</h2></div><button type="button" class="close-button" (click)="closeForm()" aria-label="Fechar">×</button></div><p class="modal-copy" id="form-description">Registre o contexto operacional para que qualquer pessoa consiga entender este recurso.</p><form (ngSubmit)="submitAsset()"><div class="form-grid"><label class="field field-wide"><span>Nome do ativo <b>*</b></span><input [(ngModel)]="draft.name" name="name" placeholder="Ex.: RDS · pulseops-db" required><small *ngIf="formSubmitted && !draft.name.trim()">Informe um nome para o ativo.</small></label><label class="field"><span>Tipo</span><select [(ngModel)]="draft.kind" name="kind"><option>Distribuição</option><option>Computação</option><option>Rede</option><option>Monitoramento</option><option>Armazenamento</option></select></label><label class="field"><span>Status</span><select [(ngModel)]="draft.status" name="status"><option>Operacional</option><option>Atenção</option><option>Manutenção</option><option>Offline</option></select></label><label class="field"><span>Ambiente</span><select [(ngModel)]="draft.environment" name="environment"><option>Produção</option><option>Staging</option><option>Laboratório</option></select></label><label class="field"><span>Zona / região <b>*</b></span><input [(ngModel)]="draft.zone" name="zone" placeholder="Ex.: sa-east-1a" required><small *ngIf="formSubmitted && !draft.zone.trim()">Informe a zona.</small></label><label class="field"><span>Responsável <b>*</b></span><input [(ngModel)]="draft.owner" name="owner" placeholder="Ex.: Platform" required><small *ngIf="formSubmitted && !draft.owner.trim()">Informe um responsável.</small></label><label class="field"><span>Endpoint / IP</span><input [(ngModel)]="draft.endpoint" name="endpoint" placeholder="Ex.: 10.0.20.12"></label><label class="field field-wide"><span>Descrição operacional</span><textarea [(ngModel)]="draft.description" name="description" rows="3" placeholder="Qual é o papel deste recurso na arquitetura?"></textarea></label></div><div class="modal-actions"><button type="button" class="secondary-button" (click)="closeForm()">Cancelar</button><button type="submit" class="primary-button">{{ editingAsset ? 'Salvar alterações' : 'Adicionar ao inventário' }} <span>→</span></button></div></form></section></div>
+
+<div *ngIf="isDeleteOpen && pendingDelete" class="modal-backdrop" (click)="closeDelete()" role="presentation"><section class="modal-card delete-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="delete-title"><div class="delete-icon">!</div><span class="section-kicker">AÇÃO IRREVERSÍVEL</span><h2 id="delete-title">Remover {{ pendingDelete.name }}?</h2><p>O ativo será retirado do inventário local. Esta ação não altera nenhum recurso real na AWS.</p><div class="modal-actions"><button type="button" class="secondary-button" (click)="closeDelete()">Manter ativo</button><button type="button" class="danger-confirm" (click)="deleteAsset()">Sim, remover</button></div></section></div>
+
+<div *ngIf="toastMessage" class="toast" role="status"><span>✓</span>{{ toastMessage }}</div>
